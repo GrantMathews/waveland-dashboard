@@ -4,19 +4,28 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceL
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-const THRESHOLDS = {
-  temperature: { min: 32, max: 95, warn_min: 59, warn_max: 86, unit: '°F' },
-  salinity:    { min: 0,  max: 40, warn_min: 15, warn_max: 35, unit: 'ppt' },
-  do:          { min: 0,  max: 15, warn_min: 3.2, warn_max: 15, unit: 'mg/L' }
+const DEFAULT_SETTINGS = {
+  temperature: { optimal_min: 50, optimal_max: 86, alert_min: 32, alert_max: 95 },
+  salinity:    { optimal_min: 15, optimal_max: 30, alert_min: 5,  alert_max: 40 },
+  do:          { optimal_min: 5,  optimal_max: 15, alert_min: 2,  alert_max: 15 }
 }
 
 const SENSOR_COLORS = { temperature: '#E8622A', salinity: '#3B9EE8', do: '#4CAF7D' }
 const SENSOR_LABELS = { temperature: 'Temperature (°F)', salinity: 'Salinity (ppt)', do: 'Dissolved O₂ (mg/L)' }
+const SENSOR_UNITS  = { temperature: '°F', salinity: 'ppt', do: 'mg/L' }
 
-function getStatus(sensor, value) {
-  const t = THRESHOLDS[sensor]
+function loadSettings() {
+  try {
+    const s = localStorage.getItem('waveland_settings')
+    return s ? JSON.parse(s) : DEFAULT_SETTINGS
+  } catch { return DEFAULT_SETTINGS }
+}
+
+function getStatus(sensor, value, settings) {
+  const t = settings[sensor]
   if (!t || value === null) return { color: '#888', label: 'no data' }
-  if (value < t.warn_min || value > t.warn_max) return { color: '#E24B4A', label: 'out of range' }
+  if (value < t.alert_min || value > t.alert_max) return { color: '#E24B4A', label: 'critical' }
+  if (value < t.optimal_min || value > t.optimal_max) return { color: '#F5A623', label: 'suboptimal' }
   return { color: '#4CAF7D', label: 'optimal' }
 }
 
@@ -32,12 +41,78 @@ function formatChartLabel(iso) {
          d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
+function SettingsPanel({ settings, onSave, onClose }) {
+  const [local, setLocal] = useState(JSON.parse(JSON.stringify(settings)))
+
+  const update = (sensor, field, value) => {
+    setLocal(prev => ({ ...prev, [sensor]: { ...prev[sensor], [field]: parseFloat(value) } }))
+  }
+
+  const sensors = [
+    { key: 'temperature', label: 'Temperature', unit: '°F' },
+    { key: 'salinity',    label: 'Salinity',    unit: 'ppt' },
+    { key: 'do',          label: 'Dissolved O₂', unit: 'mg/L' }
+  ]
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(13,27,42,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+      <div style={{ background: '#162537', border: '0.5px solid rgba(242,237,228,0.12)', borderRadius: '16px', padding: '1.75rem 2rem', width: '100%', maxWidth: '520px', margin: '0 1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+          <div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', color: '#f2ede4' }}>Settings</div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: '#8a9bb0', marginTop: '2px' }}>Threshold ranges per sensor</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#8a9bb0', fontSize: '20px', cursor: 'pointer', lineHeight: 1 }}>×</button>
+        </div>
+
+        {sensors.map(s => (
+          <div key={s.key} style={{ marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: SENSOR_COLORS[s.key], flexShrink: 0 }}></div>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: '#f2ede4', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{s.label} ({s.unit})</div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: '#8a9bb0', marginBottom: '4px', letterSpacing: '0.04em' }}>Optimal min</div>
+                <input type="number" value={local[s.key].optimal_min} onChange={e => update(s.key, 'optimal_min', e.target.value)}
+                  style={{ width: '100%', background: '#0d1b2a', border: '0.5px solid rgba(242,237,228,0.15)', borderRadius: '8px', padding: '6px 10px', color: '#f2ede4', fontFamily: 'DM Mono, monospace', fontSize: '13px' }} />
+              </div>
+              <div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: '#8a9bb0', marginBottom: '4px', letterSpacing: '0.04em' }}>Optimal max</div>
+                <input type="number" value={local[s.key].optimal_max} onChange={e => update(s.key, 'optimal_max', e.target.value)}
+                  style={{ width: '100%', background: '#0d1b2a', border: '0.5px solid rgba(242,237,228,0.15)', borderRadius: '8px', padding: '6px 10px', color: '#f2ede4', fontFamily: 'DM Mono, monospace', fontSize: '13px' }} />
+              </div>
+              <div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: '#E24B4A', marginBottom: '4px', letterSpacing: '0.04em' }}>Alert min</div>
+                <input type="number" value={local[s.key].alert_min} onChange={e => update(s.key, 'alert_min', e.target.value)}
+                  style={{ width: '100%', background: '#0d1b2a', border: '0.5px solid rgba(226,75,74,0.3)', borderRadius: '8px', padding: '6px 10px', color: '#f2ede4', fontFamily: 'DM Mono, monospace', fontSize: '13px' }} />
+              </div>
+              <div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: '#E24B4A', marginBottom: '4px', letterSpacing: '0.04em' }}>Alert max</div>
+                <input type="number" value={local[s.key].alert_max} onChange={e => update(s.key, 'alert_max', e.target.value)}
+                  style={{ width: '100%', background: '#0d1b2a', border: '0.5px solid rgba(226,75,74,0.3)', borderRadius: '8px', padding: '6px 10px', color: '#f2ede4', fontFamily: 'DM Mono, monospace', fontSize: '13px' }} />
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+          <button onClick={onClose} style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: '#8a9bb0', background: 'none', border: '0.5px solid rgba(242,237,228,0.15)', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer' }}>Cancel</button>
+          <button onClick={() => { onSave(local); onClose() }} style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: '#0d1b2a', background: '#4CAF7D', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: '500' }}>Save settings</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const [readings, setReadings] = useState([])
   const [sensor, setSensor] = useState('temperature')
   const [range, setRange] = useState(168)
   const [lastUpdated, setLastUpdated] = useState('')
   const [error, setError] = useState(null)
+  const [settings, setSettings] = useState(loadSettings)
+  const [showSettings, setShowSettings] = useState(false)
 
   async function loadData() {
     const since = new Date(Date.now() - range * 3600 * 1000).toISOString()
@@ -62,15 +137,20 @@ export default function App() {
     return () => clearInterval(id)
   }, [range])
 
+  const saveSettings = (newSettings) => {
+    setSettings(newSettings)
+    localStorage.setItem('waveland_settings', JSON.stringify(newSettings))
+  }
+
   const latest = (s) => {
     const sr = readings.filter(r => r.sensor_type === s)
     return sr.length ? parseFloat(sr[sr.length - 1].value) : null
   }
 
   const barPct = (s, val) => {
-    const t = THRESHOLDS[s]
+    const t = settings[s]
     if (!t || val === null) return 0
-    return Math.min(100, Math.max(0, ((val - t.min) / (t.max - t.min)) * 100))
+    return Math.min(100, Math.max(0, ((val - t.alert_min) / (t.alert_max - t.alert_min)) * 100))
   }
 
   const chartData = readings
@@ -91,18 +171,33 @@ export default function App() {
     .slice(0, 20)
 
   const color = SENSOR_COLORS[sensor]
-  const unit = THRESHOLDS[sensor]?.unit || ''
+  const unit = SENSOR_UNITS[sensor] || ''
 
   return (
     <div className="app">
+      {showSettings && (
+        <SettingsPanel
+          settings={settings}
+          onSave={saveSettings}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
+
       <div className="wl-header">
         <div>
           <div className="wl-title">Waveland Oyster Co.</div>
           <div className="wl-subtitle">Jackson Creek · Deltaville, VA · Lease #23694</div>
         </div>
-        <div className="wl-device-badge">
-          <div className="pulse-dot"></div>
-          <span>Waveland.Buoy.23694.1</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            onClick={() => setShowSettings(true)}
+            style={{ background: 'none', border: '0.5px solid rgba(242,237,228,0.15)', borderRadius: '8px', color: '#8a9bb0', cursor: 'pointer', padding: '5px 10px', fontFamily: 'DM Mono, monospace', fontSize: '16px', lineHeight: 1 }}
+            title="Settings"
+          >⚙</button>
+          <div className="wl-device-badge">
+            <div className="pulse-dot"></div>
+            <span>Waveland.Buoy.23694.1</span>
+          </div>
         </div>
       </div>
 
@@ -111,7 +206,7 @@ export default function App() {
       <div className="status-grid">
         {sensors.map(s => {
           const val = latest(s.key)
-          const st = getStatus(s.key, val)
+          const st = getStatus(s.key, val, settings)
           const pct = barPct(s.key, val)
           return (
             <div
@@ -162,35 +257,18 @@ export default function App() {
           </div>
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-              <XAxis
-                dataKey="time"
-                tick={{ fontSize: 10, fontFamily: 'DM Mono', fill: '#8a9bb0' }}
-                tickLine={false}
-                axisLine={false}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                tick={{ fontSize: 10, fontFamily: 'DM Mono', fill: '#8a9bb0' }}
-                tickLine={false}
-                axisLine={false}
-              />
+              <XAxis dataKey="time" tick={{ fontSize: 10, fontFamily: 'DM Mono', fill: '#8a9bb0' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <YAxis tick={{ fontSize: 10, fontFamily: 'DM Mono', fill: '#8a9bb0' }} tickLine={false} axisLine={false} />
               <Tooltip
                 contentStyle={{ background: '#162537', border: '0.5px solid rgba(242,237,228,0.1)', borderRadius: '8px', fontSize: '11px', fontFamily: 'DM Mono' }}
                 labelStyle={{ color: '#8a9bb0', marginBottom: '4px' }}
-                itemStyle={{ color: color }}
+                itemStyle={{ color }}
                 formatter={v => [v + ' ' + unit, SENSOR_LABELS[sensor].split(' (')[0]]}
               />
-              {THRESHOLDS[sensor] && (
-                <ReferenceLine y={THRESHOLDS[sensor].warn_min} stroke="#E24B4A" strokeDasharray="3 3" strokeOpacity={0.5} />
-              )}
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke={color}
-                strokeWidth={1.5}
-                dot={chartData.length > 50 ? false : { fill: color, r: 3 }}
-                activeDot={{ r: 4, fill: color }}
-              />
+              <ReferenceLine y={settings[sensor]?.optimal_min} stroke="#4CAF7D" strokeDasharray="3 3" strokeOpacity={0.4} />
+              <ReferenceLine y={settings[sensor]?.optimal_max} stroke="#4CAF7D" strokeDasharray="3 3" strokeOpacity={0.4} />
+              <ReferenceLine y={settings[sensor]?.alert_min} stroke="#E24B4A" strokeDasharray="3 3" strokeOpacity={0.4} />
+              <Line type="monotone" dataKey="value" stroke={color} strokeWidth={1.5} dot={chartData.length > 50 ? false : { fill: color, r: 3 }} activeDot={{ r: 4, fill: color }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -216,10 +294,10 @@ export default function App() {
               <tbody>
                 {recentRows.map(r => {
                   const val = parseFloat(r.value)
-                  const st = getStatus(r.sensor_type, val)
+                  const st = getStatus(r.sensor_type, val, settings)
                   const pillCls = 'pill-' + (r.sensor_type === 'do' ? 'do' : r.sensor_type)
                   const name = r.sensor_type === 'do' ? 'DO' : r.sensor_type.charAt(0).toUpperCase() + r.sensor_type.slice(1)
-                  const u = THRESHOLDS[r.sensor_type]?.unit || ''
+                  const u = SENSOR_UNITS[r.sensor_type] || ''
                   return (
                     <tr key={r.id}>
                       <td>{formatTime(r.recorded_at)}</td>
