@@ -1,0 +1,72 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #0d1b2a;
+  color: #f2ede4;
+  min-height: 100vh;
+}
+
+.app { max-width: 1100px; margin: 0 auto; padding: 0 0 3rem; }
+
+.wl-header { display: flex; align-items: center; justify-content: space-between; padding: 1.5rem 2rem 1.25rem; border-bottom: 0.5px solid rgba(242,237,228,0.1); margin-bottom: 1.25rem; }
+.wl-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 500; letter-spacing: 0.02em; color: #f2ede4; }
+.wl-subtitle { font-size: 12px; color: #8a9bb0; font-family: 'DM Mono', monospace; letter-spacing: 0.05em; margin-top: 3px; }
+.wl-device-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; font-family: 'DM Mono', monospace; color: #8a9bb0; background: #162537; border: 0.5px solid rgba(242,237,228,0.1); border-radius: 20px; padding: 4px 12px; }
+.pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: #4CAF7D; animation: pulse 2s infinite; flex-shrink: 0; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.rainbow-stripe { height: 3px; background: linear-gradient(90deg, #E8622A 0%, #F5A623 25%, #4CAF7D 50%, #3B9EE8 75%, #8B6BB1 100%); margin: 0 2rem 1.5rem; border-radius: 2px; }
+
+.status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 0 2rem; margin-bottom: 1.5rem; }
+.sensor-card { background: #162537; border: 0.5px solid rgba(242,237,228,0.08); border-radius: 12px; padding: 1.1rem 1.25rem; position: relative; overflow: hidden; cursor: pointer; transition: border-color 0.15s; }
+.sensor-card:hover { border-color: rgba(242,237,228,0.2); }
+.sensor-card.active { border-width: 1.5px; }
+.sensor-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+.sensor-card.temp::before { background: #E8622A; }
+.sensor-card.sal::before { background: #3B9EE8; }
+.sensor-card.do::before { background: #4CAF7D; }
+.sensor-card.active.temp { border-color: #E8622A; }
+.sensor-card.active.sal { border-color: #3B9EE8; }
+.sensor-card.active.do { border-color: #4CAF7D; }
+
+.sensor-label { font-size: 11px; font-family: 'DM Mono', monospace; letter-spacing: 0.06em; color: #8a9bb0; text-transform: uppercase; margin-bottom: 6px; }
+.sensor-value-temp { font-size: 28px; font-weight: 500; font-family: 'Playfair Display', serif; color: #E8622A; line-height: 1; margin-bottom: 4px; }
+.sensor-value-sal { font-size: 28px; font-weight: 500; font-family: 'Playfair Display', serif; color: #3B9EE8; line-height: 1; margin-bottom: 4px; }
+.sensor-value-do { font-size: 28px; font-weight: 500; font-family: 'Playfair Display', serif; color: #4CAF7D; line-height: 1; margin-bottom: 4px; }
+.sensor-unit { font-size: 13px; color: #8a9bb0; font-family: 'DM Mono', monospace; }
+.threshold-bar { height: 3px; background: rgba(242,237,228,0.08); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+.threshold-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+.sensor-status { display: flex; align-items: center; gap: 5px; margin-top: 7px; font-size: 11px; color: #8a9bb0; font-family: 'DM Mono', monospace; }
+.status-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
+.controls-bar { display: flex; align-items: center; gap: 10px; padding: 0 2rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.range-label { font-size: 11px; font-family: 'DM Mono', monospace; color: #8a9bb0; letter-spacing: 0.04em; }
+.controls-bar select { font-size: 12px; font-family: 'DM Mono', monospace; padding: 5px 10px; border-radius: 8px; border: 0.5px solid rgba(242,237,228,0.15); background: #162537; color: #f2ede4; cursor: pointer; }
+.refresh-btn { font-size: 11px; font-family: 'DM Mono', monospace; color: #8a9bb0; background: none; border: 0.5px solid rgba(242,237,228,0.15); border-radius: 8px; padding: 5px 12px; cursor: pointer; letter-spacing: 0.04em; }
+.refresh-btn:hover { background: #162537; color: #f2ede4; }
+
+.chart-wrap { padding: 0 2rem; margin-bottom: 1.5rem; }
+.chart-container { background: #162537; border: 0.5px solid rgba(242,237,228,0.08); border-radius: 12px; padding: 1.1rem 1.1rem 0.75rem; }
+.chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+.chart-title { font-size: 12px; font-family: 'DM Mono', monospace; color: #8a9bb0; letter-spacing: 0.05em; text-transform: uppercase; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #8a9bb0; font-family: 'DM Mono', monospace; }
+.legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+.table-wrap { padding: 0 2rem; }
+.section-label { font-size: 11px; font-family: 'DM Mono', monospace; color: #8a9bb0; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.75rem; }
+.table-outer { background: #162537; border: 0.5px solid rgba(242,237,228,0.08); border-radius: 12px; overflow: hidden; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: 'DM Mono', monospace; table-layout: fixed; }
+.data-table th { text-align: left; padding: 8px 12px; font-size: 10px; letter-spacing: 0.06em; color: #8a9bb0; border-bottom: 0.5px solid rgba(242,237,228,0.08); font-weight: 400; text-transform: uppercase; }
+.data-table td { padding: 8px 12px; color: #c8bfaf; border-bottom: 0.5px solid rgba(242,237,228,0.06); }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tbody tr:hover td { background: rgba(242,237,228,0.03); }
+.sensor-pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 500; letter-spacing: 0.04em; }
+.pill-temperature { background: rgba(232,98,42,0.15); color: #E8622A; }
+.pill-salinity { background: rgba(59,158,232,0.15); color: #3B9EE8; }
+.pill-do { background: rgba(76,175,125,0.15); color: #4CAF7D; }
+
+.no-data { text-align: center; padding: 2rem; color: #8a9bb0; font-size: 13px; font-family: 'DM Mono', monospace; }
+.last-updated { font-size: 10px; font-family: 'DM Mono', monospace; color: #8a9bb0; padding: 0.75rem 2rem 0; text-align: right; }
