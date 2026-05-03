@@ -1,16 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Line } from 'react-chartjs-2'
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Filler,
-  Tooltip
-} from 'chart.js'
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip)
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -23,7 +12,6 @@ const THRESHOLDS = {
 
 const SENSOR_COLORS = { temperature: '#E8622A', salinity: '#3B9EE8', do: '#4CAF7D' }
 const SENSOR_LABELS = { temperature: 'Temperature (°F)', salinity: 'Salinity (ppt)', do: 'Dissolved O₂ (mg/L)' }
-const SENSOR_UNITS  = { temperature: '°F', salinity: 'ppt', do: 'mg/L' }
 
 function getStatus(sensor, value) {
   const t = THRESHOLDS[sensor]
@@ -36,6 +24,12 @@ function formatTime(iso) {
   const d = new Date(iso)
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' +
          d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+}
+
+function formatChartLabel(iso) {
+  const d = new Date(iso)
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' +
+         d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
 export default function App() {
@@ -79,42 +73,10 @@ export default function App() {
     return Math.min(100, Math.max(0, ((val - t.min) / (t.max - t.min)) * 100))
   }
 
-  const chartData = () => {
-    const filtered = readings
-      .filter(r => r.sensor_type === sensor)
-      .sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at))
-    const color = SENSOR_COLORS[sensor]
-    return {
-      labels: filtered.map(r => {
-        const d = new Date(r.recorded_at)
-        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' +
-               d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-      }),
-      datasets: [{
-        data: filtered.map(r => parseFloat(r.value).toFixed(2)),
-        borderColor: color,
-        backgroundColor: color + '18',
-        borderWidth: 1.5,
-        pointRadius: filtered.length > 50 ? 0 : 3,
-        pointBackgroundColor: color,
-        fill: true,
-        tension: 0.3
-      }]
-    }
-  }
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: { callbacks: { label: ctx => ' ' + parseFloat(ctx.raw).toFixed(2) + ' ' + (SENSOR_UNITS[sensor] || '') } }
-    },
-    scales: {
-      x: { ticks: { maxTicksLimit: 6, font: { family: 'DM Mono', size: 10 }, color: '#8a9bb0', maxRotation: 0 }, grid: { color: 'rgba(242,237,228,0.05)' }, border: { display: false } },
-      y: { ticks: { font: { family: 'DM Mono', size: 10 }, color: '#8a9bb0' }, grid: { color: 'rgba(242,237,228,0.05)' }, border: { display: false } }
-    }
-  }
+  const chartData = readings
+    .filter(r => r.sensor_type === sensor)
+    .sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at))
+    .map(r => ({ time: formatChartLabel(r.recorded_at), value: parseFloat(parseFloat(r.value).toFixed(2)) }))
 
   const rangeLabel = { 24: 'last 24 hours', 72: 'last 3 days', 168: 'last 7 days', 720: 'last 30 days' }
 
@@ -127,6 +89,9 @@ export default function App() {
   const recentRows = [...readings]
     .sort((a, b) => new Date(b.recorded_at) - new Date(a.recorded_at))
     .slice(0, 20)
+
+  const color = SENSOR_COLORS[sensor]
+  const unit = THRESHOLDS[sensor]?.unit || ''
 
   return (
     <div className="app">
@@ -191,13 +156,43 @@ export default function App() {
           <div className="chart-header">
             <div className="chart-title">{SENSOR_LABELS[sensor].split(' (')[0]} — {rangeLabel[range]}</div>
             <div className="legend-item">
-              <div className="legend-dot" style={{ background: SENSOR_COLORS[sensor] }}></div>
+              <div className="legend-dot" style={{ background: color }}></div>
               <span>{SENSOR_LABELS[sensor]}</span>
             </div>
           </div>
-          <div style={{ position: 'relative', width: '100%', height: '240px' }}>
-            <Line data={chartData()} options={chartOptions} />
-          </div>
+          <ResponsiveContainer width="100%" height={240}>
+            <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+              <XAxis
+                dataKey="time"
+                tick={{ fontSize: 10, fontFamily: 'DM Mono', fill: '#8a9bb0' }}
+                tickLine={false}
+                axisLine={false}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                tick={{ fontSize: 10, fontFamily: 'DM Mono', fill: '#8a9bb0' }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <Tooltip
+                contentStyle={{ background: '#162537', border: '0.5px solid rgba(242,237,228,0.1)', borderRadius: '8px', fontSize: '11px', fontFamily: 'DM Mono' }}
+                labelStyle={{ color: '#8a9bb0', marginBottom: '4px' }}
+                itemStyle={{ color: color }}
+                formatter={v => [v + ' ' + unit, SENSOR_LABELS[sensor].split(' (')[0]]}
+              />
+              {THRESHOLDS[sensor] && (
+                <ReferenceLine y={THRESHOLDS[sensor].warn_min} stroke="#E24B4A" strokeDasharray="3 3" strokeOpacity={0.5} />
+              )}
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke={color}
+                strokeWidth={1.5}
+                dot={chartData.length > 50 ? false : { fill: color, r: 3 }}
+                activeDot={{ r: 4, fill: color }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
@@ -224,12 +219,12 @@ export default function App() {
                   const st = getStatus(r.sensor_type, val)
                   const pillCls = 'pill-' + (r.sensor_type === 'do' ? 'do' : r.sensor_type)
                   const name = r.sensor_type === 'do' ? 'DO' : r.sensor_type.charAt(0).toUpperCase() + r.sensor_type.slice(1)
-                  const unit = THRESHOLDS[r.sensor_type]?.unit || ''
+                  const u = THRESHOLDS[r.sensor_type]?.unit || ''
                   return (
                     <tr key={r.id}>
                       <td>{formatTime(r.recorded_at)}</td>
                       <td><span className={`sensor-pill ${pillCls}`}>{name}</span></td>
-                      <td>{val.toFixed(2)} {unit}</td>
+                      <td>{val.toFixed(2)} {u}</td>
                       <td style={{fontSize:'11px',color:'#8a9bb0'}}>
                         <span style={{display:'inline-block',width:'6px',height:'6px',borderRadius:'50%',background:st.color,marginRight:'4px',verticalAlign:'middle'}}></span>
                         {st.label}
