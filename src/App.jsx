@@ -25,7 +25,7 @@ function getStatus(sensor, value, settings) {
   const t = settings[sensor]
   if (!t || value === null) return { color: '#888', label: 'no data' }
   if (value < t.alert_min || value > t.alert_max) return { color: '#E24B4A', label: 'critical' }
-  if (value < t.optimal_min || value > t.optimal_max) return { color: '#F5A623', label: 'suboptimal' }
+  if (value < t.optimal_min || value > t.optimal_max) return { color: '#F5A623', label: 'low' }
   return { color: '#4CAF7D', label: 'optimal' }
 }
 
