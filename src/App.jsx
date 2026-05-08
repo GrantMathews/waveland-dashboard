@@ -314,9 +314,9 @@ export default function App() {
                 <tr>
                  <th style={{width:'22%'}}>Timestamp</th>
 <th style={{width:'27%'}}>Sensor</th>
-<th style={{width:'19%'}}>Value</th>
+<th style={{width:'20%'}}>Value</th>
 <th style={{width:'16%'}}>Status</th>
-<th style={{width:'16%'}}>Bat.</th>
+<th style={{width:'15%'}}>Bat.</th>
                 </tr>
               </thead>
               <tbody>
