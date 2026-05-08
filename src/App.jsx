@@ -331,7 +331,7 @@ export default function App() {
                     <tr key={r.id}>
                       <td>{formatTime(r.recorded_at)}</td>
                       <td><span className={`sensor-pill ${pillCls}`}>{name}</span></td>
-                      <td>{val.toFixed(2)} {u}</td>
+                      <td>{val.toFixed(1)} {u}</td>
                       <td style={{fontSize:'11px',color:'#8a9bb0'}}>
                         <span style={{display:'inline-block',width:'6px',height:'6px',borderRadius:'50%',background:st.color,marginRight:'4px',verticalAlign:'middle'}}></span>
                         {st.label}
