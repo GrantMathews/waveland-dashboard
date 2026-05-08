@@ -41,6 +41,24 @@ function formatChartLabel(iso) {
          d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
+function BatteryIndicator({ pct, charging }) {
+  if (pct === null || pct === undefined) return null
+  const color = pct > 50 ? '#4CAF7D' : pct > 25 ? '#F5A623' : '#E24B4A'
+  const icon = charging ? '⚡' : '🔋'
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '5px',
+      fontFamily: 'DM Mono, monospace', fontSize: '11px',
+      color, background: '#162537',
+      border: '0.5px solid rgba(242,237,228,0.1)',
+      borderRadius: '20px', padding: '4px 10px'
+    }}>
+      <span>{icon}</span>
+      <span>{pct.toFixed(0)}%</span>
+    </div>
+  )
+}
+
 function SettingsPanel({ settings, onSave, onClose }) {
   const [local, setLocal] = useState(JSON.parse(JSON.stringify(settings)))
 
@@ -147,6 +165,13 @@ export default function App() {
     return sr.length ? parseFloat(sr[sr.length - 1].value) : null
   }
 
+  const latestBattery = () => {
+    const sorted = [...readings].sort((a, b) => new Date(b.recorded_at) - new Date(a.recorded_at))
+    const row = sorted.find(r => r.battery_pct !== null && r.battery_pct !== undefined)
+    if (!row) return { pct: null, charging: null }
+    return { pct: parseFloat(row.battery_pct), charging: row.charging }
+  }
+
   const barPct = (s, val) => {
     const t = settings[s]
     if (!t || val === null) return 0
@@ -172,6 +197,7 @@ export default function App() {
 
   const color = SENSOR_COLORS[sensor]
   const unit = SENSOR_UNITS[sensor] || ''
+  const battery = latestBattery()
 
   return (
     <div className="app">
@@ -189,6 +215,7 @@ export default function App() {
           <div className="wl-subtitle">Jackson Creek · Deltaville, VA · Lease #23694</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <BatteryIndicator pct={battery.pct} charging={battery.charging} />
           <button
             onClick={() => setShowSettings(true)}
             style={{ background: 'none', border: '0.5px solid rgba(242,237,228,0.15)', borderRadius: '8px', color: '#8a9bb0', cursor: 'pointer', padding: '5px 10px', fontFamily: 'DM Mono, monospace', fontSize: '16px', lineHeight: 1 }}
@@ -285,10 +312,11 @@ export default function App() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th style={{width:'38%'}}>Timestamp</th>
-                  <th style={{width:'28%'}}>Sensor</th>
-                  <th style={{width:'20%'}}>Value</th>
-                  <th style={{width:'14%'}}>Status</th>
+                  <th style={{width:'34%'}}>Timestamp</th>
+                  <th style={{width:'24%'}}>Sensor</th>
+                  <th style={{width:'16%'}}>Value</th>
+                  <th style={{width:'13%'}}>Status</th>
+                  <th style={{width:'13%'}}>Battery</th>
                 </tr>
               </thead>
               <tbody>
@@ -298,6 +326,7 @@ export default function App() {
                   const pillCls = 'pill-' + (r.sensor_type === 'do' ? 'do' : r.sensor_type)
                   const name = r.sensor_type === 'do' ? 'DO' : r.sensor_type.charAt(0).toUpperCase() + r.sensor_type.slice(1)
                   const u = SENSOR_UNITS[r.sensor_type] || ''
+                  const batColor = r.battery_pct > 50 ? '#4CAF7D' : r.battery_pct > 25 ? '#F5A623' : '#E24B4A'
                   return (
                     <tr key={r.id}>
                       <td>{formatTime(r.recorded_at)}</td>
@@ -306,6 +335,9 @@ export default function App() {
                       <td style={{fontSize:'11px',color:'#8a9bb0'}}>
                         <span style={{display:'inline-block',width:'6px',height:'6px',borderRadius:'50%',background:st.color,marginRight:'4px',verticalAlign:'middle'}}></span>
                         {st.label}
+                      </td>
+                      <td style={{fontSize:'11px', color: r.battery_pct ? batColor : '#8a9bb0'}}>
+                        {r.battery_pct ? `${r.charging ? '⚡' : '🔋'} ${parseFloat(r.battery_pct).toFixed(0)}%` : '--'}
                       </td>
                     </tr>
                   )
