@@ -54,7 +54,7 @@ function BatteryIndicator({ pct, charging }) {
       borderRadius: '20px', padding: '4px 10px'
     }}>
       <span>{icon}</span>
-      <span>{pct.toFixed(0)}%</span>
+      <span>{Math.min(100, pct).toFixed(0)}%</span>
     </div>
   )
 }
