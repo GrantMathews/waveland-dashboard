@@ -312,9 +312,9 @@ export default function App() {
             <table className="data-table">
               <thead>
                 <tr>
-                 <th style={{width:'23%'}}>Timestamp</th>
+                 <th style={{width:'22%'}}>Timestamp</th>
 <th style={{width:'27%'}}>Sensor</th>
-<th style={{width:'18%'}}>Value</th>
+<th style={{width:'19%'}}>Value</th>
 <th style={{width:'16%'}}>Status</th>
 <th style={{width:'16%'}}>Bat.</th>
                 </tr>
